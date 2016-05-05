@@ -20,13 +20,18 @@ func HolaJson(w http.ResponseWriter, r *http.Request){
 	json.NewEncoder(w).Encode(response)
 }
 
+func HomeStaticPage(w http.ResponseWriter, r *http.Request){
+	http.ServeFile(w,r,"Front/index.html")
+}
+
 func HomeHandler(w http.ResponseWriter, r *http.Request){
 	
 }
 
 func main() {
 	mux := mux.NewRouter()
-	mux.HandleFunc("/", HolaMundo)
+	mux.HandleFunc("/", HomeStaticPage)
+	mux.HandleFunc("/hola", HolaMundo)
 	mux.HandleFunc("/json", HolaJson)
 	
 	http.Handle("/", mux)
