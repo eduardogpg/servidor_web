@@ -9,8 +9,14 @@ import(
 	"sync"
 )
 
-var Users = make(map[string]User)
-var UserssRWMutex sync.RWMutex 
+var UsuariosActivos = struct{
+    sync.RWMutex
+    m map[string]User
+}{m: make(map[string]User)}
+
+//var Users = make(map[string]User)
+//var UsersRWMutex sync.RWMutex 
+
 // RWMutex is a reader/writer mutual exclusion lock
 // Ver Documentación
 
@@ -66,10 +72,10 @@ func Validate(w http.ResponseWriter, r *http.Request){
 }
 
 func UserExist(user_name string) bool{
-	UserssRWMutex.Lock()
-	defer UserssRWMutex.Unlock()
+	UsuariosActivos.RLock()
+	defer UsuariosActivos.RUnlock()
 
-	if _, ok := Users[user_name]; ok{
+	if _, ok := UsuariosActivos.m[user_name]; ok{
 		return true
 	}
 	return false
@@ -80,22 +86,31 @@ func CreateUser(user_name string, ws *websocket.Conn) User{
 }
 
 func AddUser(user User){
-	UserssRWMutex.Lock()
-	defer UserssRWMutex.Unlock()
-	Users[user.User_Name] = user
+	//UsersRWMutex.Lock()
+	//defer UsersRWMutex.Unlock()
+	//Users[user.User_Name] = user
+	UsuariosActivos.Lock()
+	defer UsuariosActivos.Unlock()
+	UsuariosActivos.m[user.User_Name] = user
 }
 
 func RemoveUser(user_name string){
-	UserssRWMutex.Lock()
-	defer UserssRWMutex.Unlock()
-	delete(Users, user_name)
+	// UsersRWMutex.Lock()
+	// defer UsersRWMutex.Unlock()
+	// delete(Users, user_name)
+
+	UsuariosActivos.Lock()
+	defer UsuariosActivos.Unlock()
+	delete(UsuariosActivos.m, user_name)
 }
 
 func SenMessageUsers(messageType int, message []byte){
-	UserssRWMutex.Lock()
-	defer UserssRWMutex.Unlock()
+	//UsersRWMutex.Lock()
+	//defer UsersRWMutex.Unlock()
+	UsuariosActivos.RLock()
+	defer UsuariosActivos.RUnlock()
 
-	for _, user := range Users{
+	for _, user := range UsuariosActivos.m{
 		if err := user.Websocket.WriteMessage(messageType, message); err != nil{
 			return
 		}
@@ -103,9 +118,9 @@ func SenMessageUsers(messageType int, message []byte){
 }
 
 func LenMap()int{
-	UserssRWMutex.Lock()
-	defer UserssRWMutex.Unlock()
-	return len(Users)
+	UsuariosActivos.RLock()
+	defer UsuariosActivos.RUnlock()
+	return len(UsuariosActivos.m)
 }
 
 func GetArrayByte(value string)[]byte{
@@ -132,6 +147,7 @@ func WebSocket(w http.ResponseWriter, r *http.Request){
 	}
 	current_user := CreateUser(user_name, ws)
 	AddUser(current_user)
+	log.Println("Usuarios conectados : ", LenMap() )
 	for{
 		type_message, message, err := ws.ReadMessage()
 		//messageType int, p []byte, err error
@@ -151,7 +167,7 @@ func main() {
 	cssHandler := http.FileServer(http.Dir("./Front/CSS/"))
 	js_Handler := http.FileServer(http.Dir("./Front/JS/"))
 
-	mux.HandleFunc("/", HomeStaticPage).Methods("GET")
+	mux.HandleFunc("/", HomeStaticPage)
 	mux.HandleFunc("/hola", HolaMundo).Methods("GET")
 	mux.HandleFunc("/json", HolaJson).Methods("GET")
 	mux.HandleFunc("/validate", Validate).Methods("POST")

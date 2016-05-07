@@ -8,7 +8,7 @@ $(document).ready( function() {
 		e.preventDefault();
 
 		$.ajax({
-			type: "post",
+			type: "POST",
 			url: "http://localhost:8000/validate", //En este caso como estamos sobre el mismo servidor
 			data: {
 				"user_name" : user_name
@@ -36,6 +36,9 @@ $(document).ready( function() {
 		conexion.onopen = function(response){
 			conexion.onmessage = function(response){
 				console.log(response)
+				//Lo ultimo
+				val = $("#chat_area").val();
+		   	$("#chat_area").val(val + "\n" + response.data); 
 			}
 		}
 		$("#registro").hide();
